@@ -1,0 +1,129 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import statistics as stc 
+import pylab
+
+import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+
+df = pd.read_csv('a.txt',sep = "=",names = ('IR','R','G','BPM','AVG_BPM'))
+IR = df['IR']
+batch = 16
+list_batch_value = []
+detected_peaks = []
+detected_valley = []
+i = 0
+j = 0 
+time_series = IR
+
+
+position_count = 0
+#print(position_count)
+standrad_deviation = 0
+loop_break_counter = 0
+for i in IR:
+  list_batch_value.append(i)
+  if 91689 in list_batch_value:
+    print("in")
+  position_count = position_count  + 1 
+  #print("position_count "+str(position_count))
+  j = j + 1
+  #print(str(i) +" ,  " + str(j))
+
+  if j==16:
+    mean = stc.mean(list_batch_value)
+    #print("mean" + str(mean))
+    standrad_deviation = stc.stdev(list_batch_value)
+    #logic for detecting peaks
+    for k in list_batch_value:
+        z_score_var = ((k - mean) / standrad_deviation)
+        if z_score_var > 1.2: #1.2 is best till now 
+          list_batch_value.reverse()
+          index_val = int(list_batch_value.index(k))
+          #print(index_val)
+          actual_position = position_count - index_val
+          #print(actual_position)
+          add_tuple = (actual_position , k)
+          detected_peaks.append(add_tuple)
+    #logic for detecting valley
+    for k in list_batch_value:
+        z_score_var = ((k - mean) / standrad_deviation)
+        if z_score_var <  -1.2: #1.2 is best till now 
+          list_batch_value.reverse()
+          index_val = int(list_batch_value.index(k))
+          #print(index_val)
+          actual_position = position_count - index_val
+          #print(actual_position)
+          add_tuple = (actual_position , k)
+          detected_valley.append(add_tuple)
+
+  
+    #print("break")
+    list_batch_value = [] 
+    j = 0  
+
+result = detected_peaks[1]
+print(detected_peaks)
+
+peaks = [lis[1] for lis in detected_peaks] 
+position_find = [lis[0] for lis in detected_peaks]
+valley = [lis[1] for lis in detected_valley]
+
+print("peaks" + str(peaks))
+'''
+pylab.subplot(211)
+pylab.plot(np.arange(1, len(IR)+1), IR)
+
+pylab.plot(np.arange(1, len(IR)+1),
+           result["avgFilter"], color="cyan", lw=2)
+
+pylab.plot(np.arange(1, len(IR)+1),
+           result["avgFilter"] + threshold * result["stdFilter"], color="green", lw=2)
+
+pylab.plot(np.arange(1, len(IR)+1),
+           result["avgFilter"] - threshold * result["stdFilter"], color="green", lw=2)
+
+pylab.subplot(212)
+pylab.step(np.arange(1, len(IR)+1), result["signals"], color="red", lw=2)
+pylab.ylim(-1.5, 1.5)
+pylab.show()
+'''
+
+fig = go.Figure()
+fig.add_trace(go.Scatter(
+    y=IR,
+    mode='lines+markers',
+    name='Original Plot'
+))
+
+fig.add_trace(go.Scatter(
+    x=[lis[0] for lis in detected_peaks],
+    #y=[time_series[l] for l in detected_peaks],
+    y = peaks,
+    mode='markers',
+    marker=dict(
+        size=8,
+        color='red',
+        symbol='cross'
+    ),
+    name='Detected Peaks'
+))
+
+fig.add_trace(go.Scatter(
+    x=[lis[0] for lis in detected_valley],
+    #y=[time_series[l] for l in detected_peaks],
+    y = valley,
+    mode='markers',
+    marker=dict(
+        size=8,
+        color='green',
+        symbol='star'
+    ),
+    name='Detected valley'
+))
+
+fig.show()
+
+
+
